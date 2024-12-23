@@ -63,7 +63,6 @@ tu-01: clean-lab
 	@$(call connect, h3, h2, 192.168.1.2/24, 192.168.1.1/24)
 
 lab-02:
-	
 	@echo In this lab, you shall assign IP
 	@printf "\t h1 IP: 192.168.0.2/24\n"
 	@printf "\t h2 IP: 192.168.1.2/24\n"
@@ -76,6 +75,17 @@ lab-02:
 	@$(call gen_host, "R2", "host")
 
 	#TODO write the code below to ensure that h1 can ping 192.168.1.2, which is h2's IP
+	@$(call connect, h1, R1, 192.168.0.2/24, 192.168.0.1/24)
+	@$(call connect, h2, R2, 192.168.1.2/24, 192.168.1.1/24)
+	@$(call connect, R1, R2, 192.168.2.1/24, 192.168.2.2/24)
+
+	ip netns exec h1 ip route add default via 192.168.0.1
+	ip netns exec h2 ip route add default via 192.168.1.1
+	ip netns exec R1 ip route add 192.168.1.0/24 via 192.168.2.2
+	ip netns exec R2 ip route add 192.168.0.0/24 via 192.168.2.1
+
+useful:
+	sudo docker exec -it R1 ip route show
 
 test-01: clean-lab lab-01
 	@docker exec -it h1 ping -c 3 -W 1 192.168.0.2 && \
