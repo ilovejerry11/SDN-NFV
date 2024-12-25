@@ -18,17 +18,15 @@ ovs2:
 
 # Target to run the ONOS container
 onos:
-	sudo docker run --rm --name onos -d -p 8181:8181 -p 6653:6653 -p 8101:8101 onosproject/onos:2.7-latest
+	sudo docker run --rm --name onos -d -e ONOS_APPS=drivers,fpm,fwd,openflow,route-service,gui2 \
+	-p 8181:8181 -p 6653:6653 -p 8101:8101 onosproject/onos:2.7-latest
 
 # Target to clean up the setup
 clean:
-	sudo ovs-vsctl del-br ovs1
-	sudo ovs-vsctl del-br ovs2
-	sudo ip link del veth0 
-	sudo ip link del vethovs1ovs2
-	sudo ip link del vethR1ovs1 2>/dev/null || true
-	sudo ip link del vethh1ovs2 2>/dev/null || true
+	sudo ovs-vsctl del-br ovs1 || true
+	sudo ovs-vsctl del-br ovs2 || true 
+	basename -a /sys/class/net/veth* | xargs -I {} sudo ip link del {} 2>/dev/null || true
 
 	sudo docker stop onos || true
-	sudo docker stop R1 h1 
-	sudo docker rm R1 h1
+	sudo docker stop R1 R2 h1 h2 || true
+	sudo docker rm R1 R2 h1 h2 || true

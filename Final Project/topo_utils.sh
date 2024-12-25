@@ -102,10 +102,17 @@ docker build containers/frr -t "$ROUTERIMAGE"
 
 # TODO Write your own code
 build_ovs_path ovs1 ovs2
+
 add_container $ROUTERIMAGE R1
 add_container $HOSTIMAGE h1
 build_ovs_container_path ovs1 R1 172.16.18.69/24
 build_ovs_container_path ovs2 h1 172.16.18.2/24 172.16.18.69 
+
+add_container $ROUTERIMAGE R2
+add_container $HOSTIMAGE h2
+
+# build_ovs_container_path ovs1 R1 192.168.63.1/24
+# build_ovs_container_path ovs1 R2 192.168.63.2/24 192.168.63.1
 
 # Create OVS switches
 # ovs-vsctl add-br OVS1
