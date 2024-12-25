@@ -101,14 +101,13 @@ docker build containers/host -t "$HOSTIMAGE"
 docker build containers/frr -t "$ROUTERIMAGE"
 
 # TODO Write your own code
-
-# Create containers
-add_container $HOSTIMAGE host1
-add_container $HOSTIMAGE host2
-add_container $ROUTERIMAGE FRRouting1
-add_container $ROUTERIMAGE FRRouting2
-add_container sdnfv-final-onos ONOS
+build_ovs_path ovs1 ovs2
+add_container $ROUTERIMAGE R1
+add_container $HOSTIMAGE h1
+build_ovs_container_path ovs1 R1 172.16.18.69/24
+build_ovs_container_path ovs2 h1 172.16.18.2/24 172.16.18.69 
 
 # Create OVS switches
-ovs-vsctl add-br OVS1
-ovs-vsctl add-br OVS2
+# ovs-vsctl add-br OVS1
+
+
