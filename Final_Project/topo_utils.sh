@@ -118,7 +118,7 @@ build_ovs_path ovs1 ovs2
  
 add_container $ROUTERIMAGE R1 -v $(pwd)/config/R1/frr.conf:/etc/frr/frr.conf -v $(pwd)/config/daemons:/etc/frr/daemons
 add_container $HOSTIMAGE h1
-add_container $ROUTERIMAGE R2
+add_container $ROUTERIMAGE R2 -v $(pwd)/config/R2/frr.conf:/etc/frr/frr.conf -v $(pwd)/config/daemons:/etc/frr/daemons
 add_container $HOSTIMAGE h2
 
 build_ovs_container_path ovs1 R1 172.16.18.69/24 "" "-h1"
@@ -139,4 +139,4 @@ set_intf_container R2 vethR2h2 172.17.18.1/24
 # Add Routes on R1 and R2
 sudo docker exec -it R1 ip route add 172.17.18.0/24 via 192.168.63.2
 sudo docker exec -it R2 ip route add 172.16.18.0/24 via 192.168.63.1
-# sudo docker exec -it R2 ip route add 192.168.70.0/24 via 192.168.63.1
+sudo docker exec -it R2 ip route add 192.168.70.0/24 via 192.168.63.1
