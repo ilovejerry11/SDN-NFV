@@ -1,6 +1,6 @@
-.PHONY: ovs2 onos clean all
+.PHONY: ovs1 ovs2 onos shell pign clean all
 
-all: onos ovs1 ovs2
+all: onos ovs1 ovs2 shell
 
 noONOS: ovs1 ovs2
 
@@ -21,12 +21,19 @@ ovs2:
 onos:
 	sudo docker run --rm --name onos -d -e ONOS_APPS=drivers,fpm,fwd,openflow,route-service,gui2 \
 	-p 8181:8181 -p 6653:6653 -p 8101:8101 onosproject/onos:2.7-latest
+shell:
+	sudo ./topo_utils.sh
 ping:
 	sudo docker exec -it h1 ping -c3 172.16.18.69 # h1 ping FRR(R1)
 	sudo docker exec -it h1 ping -c3 192.168.63.1 # h1 ping FRR(R1), but different subnet
 	sudo docker exec -it R2 ping -c3 192.168.63.1 # R2 ping FRR(R1)
 	sudo docker exec -it R2 ping -c3 172.16.18.2 # R2 ping h1
 	sudo docker exec -it h2 ping -c3 172.16.18.2 # h2 ping h1
+	sudo docker exec -it h1 ping -c3 192.168.70.253 # h1 ping ta
+	sudo docker exec -it h2 ping -c3 192.168.70.253 # h2 ping ta, not work now
+route:
+	sudo docker exec -it R2 ip route 
+	sudo docker exec -it R1 ip route
 
 # Target to clean up the setup
 clean:

@@ -127,7 +127,16 @@ build_ovs_container_path ovs2 h1 172.16.18.2/24 172.16.18.69
 build_ovs_container_path ovs1 R1 192.168.63.1/24 "" "-R2"
 build_ovs_container_path ovs1 R2 192.168.63.2/24 192.168.63.1 # AS65xx1 gw=R1?
 
+build_ovs_container_path ovs1 R1 192.168.70.18/24 "" "-ta"
+
+build_ovs_container_path ovs1 R1 192.168.100.3/24 "" "-onos"
+
 # build h2-R2 path
 create_veth_pair vethh2R2 vethR2h2
 set_intf_container h2 vethh2R2 172.17.18.2/24 172.17.18.1
-set_intf_container R2 vethR2h2 172.17.18.1/24 #192.168.63.2 # AS65xx1 gw=R1?
+set_intf_container R2 vethR2h2 172.17.18.1/24 
+
+# Add Routes on R1 and R2
+sudo docker exec -it R1 ip route add 172.17.18.0/24 via 192.168.63.2
+sudo docker exec -it R2 ip route add 172.16.18.0/24 via 192.168.63.1
+# sudo docker exec -it R2 ip route add 192.168.70.0/24 via 192.168.63.1
