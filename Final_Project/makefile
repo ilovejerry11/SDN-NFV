@@ -30,11 +30,19 @@ ping:
 	sudo docker exec -it R2 ping -c3 172.16.18.2 # R2 ping h1
 	sudo docker exec -it h2 ping -c3 172.16.18.2 # h2 ping h1
 	sudo docker exec -it h1 ping -c3 192.168.70.253 # h1 ping ta
-	sudo docker exec -it h2 ping -c3 192.168.70.253 # h2 ping ta, not work now
+	sudo docker exec -it h2 ping -c3 192.168.70.253 # h2 ping ta, is working now
+ping6:
+	sudo docker exec -it R1 ping6 2a0b:4e07:c4:18::2
+	sudo docker exec -it h1 ping6 2a0b:4e07:c4:18::69
 route:
 	sudo docker exec -it R2 ip route 
 	sudo docker exec -it R1 ip route
-
+route6:
+	sudo docker exec -it R2 ip -6 route 
+	sudo docker exec -it R1 ip -6 route
+neigh:
+	sudo docker exec -it R2 ip neigh
+	sudo docker exec -it R1 ip neigh
 # Target to clean up the setup
 clean:
 	sudo ovs-vsctl del-br ovs1 || true
