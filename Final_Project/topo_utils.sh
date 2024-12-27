@@ -143,3 +143,5 @@ set_v6intf_container R2 vethR2h2 2a0b:4e07:c4:118::1/64
 sudo docker exec -it R1 ip route add 172.17.18.0/24 via 192.168.63.2
 sudo docker exec -it R2 ip route add 172.16.18.0/24 via 192.168.63.1
 # sudo docker exec -it R2 ip route add 192.168.70.0/24 via 192.168.63.1
+
+# Need to add ipv6 Routes on R1 and R2?
