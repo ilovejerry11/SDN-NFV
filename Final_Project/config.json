@@ -1,0 +1,50 @@
+{
+    "ports": {
+       "of:000056d287ab2546/3": {
+            "interfaces": [
+                {
+                    "name": "intf1",
+                    "ips": [
+                        "192.168.70.1/24",
+                        "fd70::1/64",
+                        "fe80:42:c0ff:fea8:46fd/128"
+                    ]
+                }
+            ]
+        },
+	    "of:0000000000000001/4": {
+            "interfaces": [
+                {
+                    "name": "intf2",
+                    "ips": [
+                        "192.168.63.1/24",
+                        "fd63::1/64"
+                    ]
+                }
+            ]
+        }
+    },
+    "apps": {
+        "nycu.sdnfv.vrouter": {
+            "router": {
+                "vrouter": "of:",
+                "vrouter-mac": "",
+                "gateway-ip4": "",
+                "gateway-ip6": "",
+                "gateway-mac": "",
+                "v4-peers": [
+                    "192.168.70.1, 192.168.70.253", 
+                    "192.168.63.1, 192.168.63.2" 
+                ],
+                "v6-peers": []
+            }
+        },
+        "nycu.sdnfv.proxyarp": {
+            "virtual-arps": {
+                "virtual-ip4": "",
+                "virtual-ip6": "",
+                "virtual-mac": ""
+            }
+        }
+    }
+}
