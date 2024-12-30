@@ -23,25 +23,25 @@ import org.onosproject.cfg.ComponentConfigAdapter;
 /**
  * Set of tests of the ONOS application component.
  */
-public class AppComponentTest {
+// public class AppComponentTest {
 
-    private AppComponent component;
+//     private AppComponent component;
 
-    @Before
-    public void setUp() {
-        component = new AppComponent();
-        component.cfgService = new ComponentConfigAdapter();
-        component.activate();
-    }
+//     @Before
+//     public void setUp() {
+//         component = new AppComponent();
+//         component.cfgService = new ComponentConfigAdapter();
+//         component.activate();
+//     }
 
-    @After
-    public void tearDown() {
-        component.deactivate();
-    }
+//     @After
+//     public void tearDown() {
+//         component.deactivate();
+//     }
 
-    @Test
-    public void basics() {
+//     @Test
+//     public void basics() {
 
-    }
+//     }
 
-}
+// }

@@ -1,2 +1,6 @@
-nycu/sdnfv/AppComponent.class
+nycu/sdnfv/vrouter/AppComponent$vRouterProcessor.class
+nycu/sdnfv/vrouter/vRouterConfig.class
+nycu/sdnfv/vrouter/AppComponent$1.class
+nycu/sdnfv/vrouter/AppComponent.class
+nycu/sdnfv/vrouter/AppComponent$vRouterConfigLinster.class
 nycu/sdnfv/SomeInterface.class

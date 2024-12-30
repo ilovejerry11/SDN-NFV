@@ -44,6 +44,23 @@ function set_intf_container {
     fi
 }
 
+function set_v4intf_container {
+    pid=$(docker inspect -f '{{.State.Pid}}' $(docker ps -aqf "name=$1"))
+    ifname=$2
+    ipaddr=$3
+    echo "Add interface $ifname with ip $ipaddr to container $1"
+
+    if [ $# -ge 3 ]
+    then
+        ip netns exec "$pid" ip addr add "$ipaddr" dev "$ifname"
+    fi
+    ip netns exec "$pid" ip link set "$ifname" up
+    if [ $# -ge 4 ]
+    then
+        ip netns exec "$pid" route add default gw $4
+    fi
+}
+
 # Set container interface's ipv6 address and gateway
 # params: container_name infname [ipaddress] [gw addr]
 function set_v6intf_container {
@@ -84,26 +101,26 @@ function build_ovs_path {
 }
 
 # Connects a container to an ovsswitch, "original version"
-# params: ovs container [ipaddress] [gw addr] [unique_suffix]
-# function build_ovs_container_path {
-#     ovs_inf="veth$1$2"
-#     container_inf="veth$2$1"
-#     create_veth_pair $ovs_inf $container_inf
-#     ovs-vsctl add-port $1 $ovs_inf
-#     set_intf_container $2 $container_inf $3 $4
-# }
-
-# Connects a container to an OVS switch
-# params: ovs container [ipaddress] [gw addr] [unique_suffix] [ipv6addr] [gw v6addr]
+# params: ovs container [ipaddress] [gw addr] 
 function build_ovs_container_path {
-    suffix=${5:-""}
-    ovs_inf="veth${1}${2}${suffix}"
-    container_inf="veth${2}${1}${suffix}"
+    ovs_inf="veth$1$2"
+    container_inf="veth$2$1"
     create_veth_pair $ovs_inf $container_inf
     ovs-vsctl add-port $1 $ovs_inf
     set_intf_container $2 $container_inf $3 $4
-    set_v6intf_container $2 $container_inf $6 $7
 }
+
+# Connects a container to an OVS switch
+# params: ovs container [ipaddress] [gw addr] [unique_suffix] [ipv6addr] [gw v6addr]
+# function build_ovs_container_path {
+#     suffix=${5:-""}
+#     ovs_inf="veth${1}${2}${suffix}"
+#     container_inf="veth${2}${1}${suffix}"
+#     create_veth_pair $ovs_inf $container_inf
+#     ovs-vsctl add-port $1 $ovs_inf
+#     set_intf_container $2 $container_inf $3 $4
+#     set_v6intf_container $2 $container_inf $6 $7
+# }
 
 
 HOSTIMAGE="sdnfv-final-host"
@@ -122,15 +139,21 @@ add_container $HOSTIMAGE h1
 add_container $ROUTERIMAGE R2 -v $(pwd)/config/R2/frr.conf:/etc/frr/frr.conf -v $(pwd)/config/daemons:/etc/frr/daemons
 add_container $HOSTIMAGE h2
 
-build_ovs_container_path ovs1 R1 172.16.18.69/24 "" "-h1" 2a0b:4e07:c4:18::69/64
-build_ovs_container_path ovs2 h1 172.16.18.2/24 172.16.18.69 "" 2a0b:4e07:c4:18::2/64 2a0b:4e07:c4:18::69
+build_ovs_container_path ovs1 R1 172.16.18.69/24 #"" #"-h1" 2a0b:4e07:c4:18::69/64
+set_v6intf_container R1 vethR1ovs1 2a0b:4e07:c4:18::69/64
+build_ovs_container_path ovs2 h1 172.16.18.2/24 172.16.18.69 
+set_v6intf_container h1 vethh1ovs2 2a0b:4e07:c4:18::2/64 2a0b:4e07:c4:18::69
 
-build_ovs_container_path ovs1 R1 192.168.63.1/24 "" "-R2" fd63::1/64
-build_ovs_container_path ovs1 R2 192.168.63.2/24 192.168.63.1 "" fd63::2/64 fd63::1
+set_v4intf_container R1 vethR1ovs1 192.168.63.1/24 #"" "-R2" fd63::1/64
+set_v6intf_container R1 vethR1ovs1 fd63::1/64
+build_ovs_container_path ovs1 R2 192.168.63.2/24 192.168.63.1 #"" fd63::2/64 fd63::1
+set_v6intf_container R2 vethR2ovs1 fd63::2/64 fd63::1
 
-build_ovs_container_path ovs1 R1 192.168.70.18/24 "" "-ta" fd70::18/64
+set_v4intf_container R1 vethR1ovs1 192.168.70.18/24 #"" "-ta" fd70::18/64
+set_v6intf_container R1 vethR1ovs1 fd70::18/64
 
-build_ovs_container_path ovs1 R1 192.168.100.3/24 "" "-onos"
+set_v4intf_container R1 vethR1ovs1 192.168.100.3/24 #"" "-onos"
+set_v6intf_container R1 vethR1ovs1
 
 # build h2-R2 path
 create_veth_pair vethh2R2 vethR2h2
@@ -140,8 +163,9 @@ set_intf_container R2 vethR2h2 172.17.18.1/24
 set_v6intf_container R2 vethR2h2 2a0b:4e07:c4:118::1/64
 
 # Add Routes on R1 and R2
-sudo docker exec -it R1 ip route add 172.17.18.0/24 via 192.168.63.2
-sudo docker exec -it R2 ip route add 172.16.18.0/24 via 192.168.63.1
+# sudo docker exec -it R1 ip route add 172.17.18.0/24 via 192.168.63.2
+# sudo docker exec -it R2 ip route add 172.16.18.0/24 via 192.168.63.1
+
 # sudo docker exec -it R2 ip route add 192.168.70.0/24 via 192.168.63.1
 
 # Need to add ipv6 Routes on R1 and R2?

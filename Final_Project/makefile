@@ -19,10 +19,16 @@ ovs2:
 
 # Target to run the ONOS container
 onos:
-	sudo docker run --rm --name onos -d -e ONOS_APPS=drivers,fpm,fwd,openflow,route-service,gui2 \
-	-p 8181:8181 -p 6653:6653 -p 8101:8101 onosproject/onos:2.7-latest
+	sudo docker run --rm --name onos -d -e ONOS_APPS=drivers,fpm,openflow,route-service,gui2 \
+	-p 8181:8181 -p 6653:6653 -p 8101:8101 -p 2620:2620 onosproject/onos:2.7-latest
 shell:
 	sudo ./topo_utils.sh
+	
+install:
+	# cd /home/demo/SDN-NFV/Final_Project/ProxyArp && onos-app localhost install! target/ProxyArp-1.0-SNAPSHOT.oar || true
+	# cd /home/demo/SDN-NFV/Final_Project/bridge && onos-app localhost install! target/bridge-1.0-SNAPSHOT.oar || true
+	cd /home/demo/SDN-NFV/Final_Project/vrouter && onos-app localhost install! target/vrouter-1.0-SNAPSHOT.oar || true
+	onos-netcfg localhost config.json
 ping:
 	sudo docker exec -it h1 ping -c3 172.16.18.69 # h1 ping FRR(R1)
 	sudo docker exec -it h1 ping -c3 192.168.63.1 # h1 ping FRR(R1), but different subnet
@@ -33,7 +39,8 @@ ping:
 	sudo docker exec -it h2 ping -c3 192.168.70.253 # h2 ping ta, is working now
 ping6:
 	sudo docker exec -it R1 ping6 2a0b:4e07:c4:18::2
-	sudo docker exec -it h1 ping6 2a0b:4e07:c4:18::69
+	sudo docker exec -it h1 ping6 2a0b:4e07:c4:18::69 # h1 ping FRR
+	sudo docker exec -it h1 ping6 2a0b:4e07:c4:118::2 # h1 ping h2
 route:
 	sudo docker exec -it R2 ip route 
 	sudo docker exec -it R1 ip route
