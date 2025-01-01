@@ -11,6 +11,8 @@ ovs1:
 ovs2:
 	sudo ovs-vsctl add-br ovs2 -- set bridge ovs2 other_config:datapath-id=0000000000000002 -- set bridge ovs2 protocols=OpenFlow14 -- set-controller ovs2 tcp:192.168.100.1:6653
 	sudo ovs-vsctl add-port ovs2 TO_TA_VXLAN -- set interface TO_TA_VXLAN type=vxlan options:remote_ip=192.168.60.18
+	sudo ovs-vsctl add-port ovs2 TO_TM17_VXLAN -- set interface TO_TM17_VXLAN type=vxlan options:remote_ip=192.168.61.17
+	sudo ovs-vsctl add-port ovs2 TO_TM16_VXLAN -- set interface TO_TM16_VXLAN type=vxlan options:remote_ip=192.168.61.16
 	sudo ip link add veth0 type veth peer name veth1
 	sudo ovs-vsctl add-port ovs2 veth0
 	sudo ip link set veth0 up
@@ -25,15 +27,16 @@ shell:
 	sudo ./topo_utils.sh
 	
 install:
-	# cd /home/demo/SDN-NFV/Final_Project/ProxyArp && onos-app localhost install! target/ProxyArp-1.0-SNAPSHOT.oar || true
-	# cd /home/demo/SDN-NFV/Final_Project/bridge && onos-app localhost install! target/bridge-1.0-SNAPSHOT.oar || true
-	cd /home/demo/SDN-NFV/Final_Project/vrouter && onos-app localhost install! target/vrouter-1.0-SNAPSHOT.oar || true
+	cd /home/demo/Documents/repository/Final_Project/ProxyArp && onos-app localhost install! target/ProxyArp-1.0-SNAPSHOT.oar || true
+	cd /home/demo/Documents/repository/Final_Project/bridge && onos-app localhost install! target/bridge-1.0-SNAPSHOT.oar || true
+	cd /home/demo/Documents/repository/Final_Project/vrouter && onos-app localhost install! target/vrouter-1.0-SNAPSHOT.oar || true
 	onos-netcfg localhost config.json
 ping:
 	sudo docker exec -it h1 ping -c3 172.16.18.69 # h1 ping FRR(R1)
-	sudo docker exec -it h1 ping -c3 192.168.63.1 # h1 ping FRR(R1), but different subnet
+	# sudo docker exec -it h1 ping -c3 192.168.63.1 # h1 ping FRR(R1), but different subnet
+	sudo docker exec -it h1 ping -c3 172.16.18.2 # h1 ping h2
 	sudo docker exec -it R2 ping -c3 192.168.63.1 # R2 ping FRR(R1)
-	sudo docker exec -it R2 ping -c3 172.16.18.2 # R2 ping h1
+	# sudo docker exec -it R2 ping -c3 172.16.18.2 # R2 ping h1
 	sudo docker exec -it h2 ping -c3 172.16.18.2 # h2 ping h1
 	sudo docker exec -it h1 ping -c3 192.168.70.253 # h1 ping ta
 	sudo docker exec -it h2 ping -c3 192.168.70.253 # h2 ping ta, is working now
@@ -59,3 +62,7 @@ clean:
 	sudo docker stop onos || true
 	sudo docker stop R1 R2 h1 h2 || true
 	sudo docker rm R1 R2 h1 h2 || true
+build:
+	cd /home/demo/Documents/repository/Final_Project/ProxyArp && mvn clean install -DskipTests
+	cd /home/demo/Documents/repository/Final_Project/bridge && mvn clean install -DskipTests
+	cd /home/demo/Documents/repository/Final_Project/vrouter && mvn clean install -DskipTests

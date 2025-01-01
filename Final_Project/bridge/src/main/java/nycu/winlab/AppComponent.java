@@ -98,7 +98,7 @@ public class AppComponent {
         appId = coreService.registerApplication("nycu.winlab.bridge");
 
         // add a packet processor to packetService
-        packetService.addProcessor(processor, PacketProcessor.director(2));
+        packetService.addProcessor(processor, PacketProcessor.director(50));
 
         // install a flowrule for packet-in
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
@@ -156,7 +156,6 @@ public class AppComponent {
             }
             if(context.inPacket().parsed().getEtherType() == Ethernet.TYPE_IPV6){
                 IPv6 pkt = (IPv6) context.inPacket().parsed().getPayload();
-                
                 if(pkt.getNextHeader() == IPv6.PROTOCOL_ICMP6){
                     ICMP6 icmppkt =(ICMP6) pkt.getPayload();
                     if (icmppkt.getIcmpType() == ICMP6.NEIGHBOR_SOLICITATION || icmppkt.getIcmpType() == ICMP6.NEIGHBOR_ADVERTISEMENT){
@@ -165,6 +164,7 @@ public class AppComponent {
                     }
                 }
             }
+    
             InboundPacket pkt = context.inPacket();
             Ethernet ethPkt = pkt.parsed();
 
@@ -172,6 +172,12 @@ public class AppComponent {
                 return;
             }
 
+            if(ethPkt.getDestinationMAC() == MacAddress.valueOf("00:00:00:00:00:02"))
+            {   
+                log.info("TO gateway");
+                return;
+            }
+            
             DeviceId recDevId = pkt.receivedFrom().deviceId();
             PortNumber recPort = pkt.receivedFrom().port();
             MacAddress srcMac = ethPkt.getSourceMAC();
@@ -201,7 +207,7 @@ public class AppComponent {
                 installRule(recDevId, bridgeTable.get(recDevId).get(dstMac), srcMac, dstMac);
                 log.info("MAC address `" + dstMac + "` is matched on `" + recDevId + "`. Install a flow rule.");
             }
-            context.block();
+            // context.block();
         }
     }
 

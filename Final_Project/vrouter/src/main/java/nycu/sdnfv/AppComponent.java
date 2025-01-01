@@ -32,14 +32,19 @@ import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.Host;
+import org.onosproject.net.PortNumber;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
+import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.host.HostService;
@@ -47,8 +52,17 @@ import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.PointToPointIntent;
 import org.onosproject.net.intf.Interface;
 import org.onosproject.net.intf.InterfaceService;
+import org.onosproject.net.meter.Band;
+import org.onosproject.net.meter.DefaultBand;
+import org.onosproject.net.meter.DefaultMeterRequest;
+import org.onosproject.net.meter.Meter;
+import org.onosproject.net.meter.Meter.Unit;
+import org.onosproject.net.meter.MeterId;
+import org.onosproject.net.meter.MeterRequest;
+import org.onosproject.net.meter.MeterService;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
+import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketProcessor;
 import org.onosproject.net.packet.PacketService;
 import org.onosproject.routeservice.ResolvedRoute;
@@ -71,6 +85,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -121,6 +137,12 @@ public class AppComponent{
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected HostService hostService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected MeterService meterService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected FlowRuleService flowRuleService;
+
     ApplicationId appId;
     ConnectPoint frrCP;
     MacAddress frrMac;
@@ -137,9 +159,10 @@ public class AppComponent{
     @Activate
     protected void activate() {
         appId = coreService.registerApplication("nycu.sdnfv.vrouter");
-        packetService.addProcessor(processor, PacketProcessor.director(3));
+        packetService.addProcessor(processor, PacketProcessor.director(5));
         cfgService.addListener(cfgListener);
         cfgService.registerConfigFactory(factory);
+        requestPacketIn();
         log.info("Started");
     }
 
@@ -149,26 +172,68 @@ public class AppComponent{
         cfgService.unregisterConfigFactory(factory);
         packetService.removeProcessor(processor);
         processor = null;
-
+        cancelPacketIn();
         log.info("Stopped");
     }
+    @Modified
+    public void modified(ComponentContext context){
+        requestPacketIn();
+    }
+
+    private void requestPacketIn(){
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                        .matchEthType(Ethernet.TYPE_IPV4)
+                        .matchEthDst(MacAddress.valueOf("00:00:00:00:00:02"))
+                        .build();
+        packetService.requestPackets(selector, PacketPriority.REACTIVE, appId);
+        selector = DefaultTrafficSelector.builder()
+                        .matchEthType(Ethernet.TYPE_IPV6)
+                        .matchEthDst(MacAddress.valueOf("00:00:00:00:00:02"))
+                        .build();
+        packetService.requestPackets(selector, PacketPriority.REACTIVE, appId);
+    }
+
+    private void cancelPacketIn(){
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                        .matchEthType(Ethernet.TYPE_IPV4)
+                        .matchEthDst(MacAddress.valueOf("00:00:00:00:00:02"))
+                        .build();
+        packetService.cancelPackets(selector, PacketPriority.REACTIVE, appId);
+        selector = DefaultTrafficSelector.builder()
+                        .matchEthType(Ethernet.TYPE_IPV6)
+                        .matchEthDst(MacAddress.valueOf("00:00:00:00:00:02"))
+                        .build();
+        packetService.cancelPackets(selector, PacketPriority.REACTIVE, appId);
+    }
+    
     private class vRouterProcessor implements PacketProcessor {
         @Override
         public void process(PacketContext context){
-            if(context.isHandled()) return;
+            
+            if(context.isHandled()) {
+                // log.info("HANDLED");
+                return;
+            }
         
             InboundPacket pkt = context.inPacket();
             Ethernet ethPkt = pkt.parsed();
             
-            if(ethPkt == null) return;
+            if(ethPkt == null) {
+                log.info("ETH NULL");
+                return;
+            }
             // Do not process ARP and NDP packet
-            if(ethPkt.getEtherType() == Ethernet.TYPE_ARP) return;
+            if(ethPkt.getEtherType() == Ethernet.TYPE_ARP){
+                log.info("APR BYE");
+                return;
+            }
             if(context.inPacket().parsed().getEtherType() == Ethernet.TYPE_IPV6){
                 IPv6 ip6pkt = (IPv6) context.inPacket().parsed().getPayload();
                 
                 if(ip6pkt.getNextHeader() == IPv6.PROTOCOL_ICMP6){
                     ICMP6 icmppkt =(ICMP6) ip6pkt.getPayload();
                     if (icmppkt.getIcmpType() == ICMP6.NEIGHBOR_SOLICITATION || icmppkt.getIcmpType() == ICMP6.NEIGHBOR_ADVERTISEMENT){         
+                        log.info("NA AND NS BYE");
                         return;
                     }
                 }
@@ -180,6 +245,7 @@ public class AppComponent{
             
             ConnectPoint inPoint = pkt.receivedFrom();
             // IPv4 or IPv6
+            log.info("ETH TYPE " + ethPkt.getEtherType());
             if(ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
                     IPv4 ip4Pkt = (IPv4) ethPkt.getPayload();
                     srcIp = Ip4Address.valueOf(ip4Pkt.getSourceAddress());
@@ -218,6 +284,8 @@ public class AppComponent{
             // (No mater inside or outside the AS since the OVS3 is also got the mac by Proxy ARP)
             
             ResolvedRoute route = getRoute(dstIp);
+            log.info("[VROUTER] DST MAC " + dstMac);
+            log.info("[VROUTER] ROUTE: " + route);
             if(dstMac.equals(virtualMac)){ 
                 
                 if (route == null){ // if no info of the next hop -> local or no such host
@@ -272,7 +340,7 @@ public class AppComponent{
             }
             
 
-            context.block();
+            // context.block();
         }
 
         private ResolvedRoute getRoute(IpAddress dstIp){
@@ -400,7 +468,7 @@ public class AppComponent{
             
             TrafficSelector selector = DefaultTrafficSelector.emptySelector();
             if (type == Ethernet.TYPE_IPV4) {
-                selector = DefaultTrafficSelector.builder()
+               selector = DefaultTrafficSelector.builder()
                                 .matchEthType(type)
                                 .matchIPDst(dstIpPrefix)
                                 .build(); 
@@ -417,47 +485,20 @@ public class AppComponent{
                                 .build();
 
             FilteredConnectPoint ingressCP = new FilteredConnectPoint(ingress);
-            FilteredConnectPoint engressCP = new FilteredConnectPoint(dstRouterCP);
+            FilteredConnectPoint egressCP = new FilteredConnectPoint(dstRouterCP);
             PointToPointIntent intent = PointToPointIntent.builder()
                                 .appId(appId)
                                 .filteredIngressPoint(ingressCP)
-                                .filteredEgressPoint(engressCP)
+                                .filteredEgressPoint(egressCP)
                                 .selector(selector)
                                 .treatment(treatment)
                                 .priority(50)
                                 .build();
+            log.info("From " + virtualMac + " to " + nextHopMac);
+            log.info("From " + ingressCP.toString() + " to " + egressCP.toString());
             intentService.submit(intent);
+            log.info("TO OUTSIDE Intent submitted.");
         }
-
-        // private void transit_intent(IpPrefix dstIpPrefix, IpPrefix nextHopIpPrefix, MacAddress nextHopMac, ConnectPoint ingress){
-        //     // from outside to other outside
-        //     // e.g. from h2 to TA/World
-
-        //     ConnectPoint dstRouterCP = edgeRouterCP.get(nextHopIpPrefix);
-
-
-        //     TrafficSelector selector = DefaultTrafficSelector.builder()
-        //                         .matchEthType(Ethernet.TYPE_IPV4)
-        //                         .matchIPDst(dstIpPrefix)
-        //                         .build();
-        //     TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-        //                         .setEthSrc(virtualMac)
-        //                         .setEthDst(nextHopMac)
-        //                         .build();
-        //     FilteredConnectPoint ingressCP = new FilteredConnectPoint(ingress);
-        //     FilteredConnectPoint egressCP = new FilteredConnectPoint(dstRouterCP);
-
-        //     PointToPointIntent intent = PointToPointIntent.builder()
-        //                         .appId(appId)
-        //                         .filteredIngressPoint(ingressCP)
-        //                         .filteredEgressPoint(egressCP)
-        //                         .selector(selector)
-        //                         .treatment(treatment)
-        //                         .priority(50)
-        //                         .build();
-        //     intentService.submit(intent);
-        // }
-
     }
 
 
@@ -470,7 +511,7 @@ public class AppComponent{
                 if(config != null){
                     frrCP = config.getVroutingConnectPoint();
                     frrMac = config.getVroutingMac();
-                    frrIp = config.getVrroutingIp4();
+                    frrIp = config.getVroutingIp4();
                     virtualMac = config.getGatewayMac();
                     virtaulIp4Addr = config.getGatewayIp4();
                     virtualIp6Addr = config.getGatewayIp6();
@@ -489,27 +530,67 @@ public class AppComponent{
                         log.info("IPv6 Peers: " + ip);
                     }
                     // set intent between Frr and Peers (other AS's router)
-                    for(Ip4Address peerIp: v4Peers){
-                        log.info("From "+ peerIp+ " to "+ frrCP);
+                    for(int i = 0; i < v4Peers.size(); i+=2){
+                        Ip4Address peerIp = v4Peers.get(i);
+                        Ip4Address frrIp = v4Peers.get(i+1);
                         Interface itf = interfaceService.getMatchingInterface(peerIp);
-                        log.info("Interface: "+itf);
                         // use interface service to get the connect point's interface
-                        ConnectPoint peerCP = itf.connectPoint();
-                        log.info("From: ", peerCP + " to  "+ frrCP);
+                        Interface frritf = interfaceService.getMatchingInterface(frrIp);
                         // from FRR to Peer(other router)
-                        bgpIntentInstall(frrCP, peerCP, peerIp);
+                        bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), peerIp);
                         // from Peer(other router) to FRR
-                        bgpIntentInstall(peerCP, frrCP, frrIp);
+                        bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), frrIp);
                         // add the infomation of edge router's IP and CP
-                        edgeRouterCP.put(peerIp.toIpPrefix(), peerCP);
+                        edgeRouterCP.put(peerIp.toIpPrefix(), itf.connectPoint());
                     }
                     // for(Ip6Address peerIp: v6Peers){
-                    //     ConnectPoint peerCP = interfaceService.getMatchingInterface(peerIp).connectPoint();
-                    //     // from FRR to Peer(other router)
-                    //     bgpIntentInstall(frrCP, peerCP, peerIp);
-                    //     // from Peer(other router) to FRR
-                    //     bgpIntentInstall(peerCP, frrCP, virtualIp6Addr);
-                    // }                                      
+                    for(int i = 0; i < v6Peers.size(); i+=2){
+                        Ip6Address peerIp = v6Peers.get(i);
+                        Ip6Address frrIp = v6Peers.get(i+1);
+                        Interface itf = interfaceService.getMatchingInterface(peerIp);
+                        Interface frritf = interfaceService.getMatchingInterface(frrIp);
+                        // from FRR to Peer(other router)
+                        bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), frrIp);
+                        // from Peer(other router) to FRR
+                        bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), peerIp);
+                        edgeRouterCP.put(peerIp.toIpPrefix(), itf.connectPoint());
+                    }
+
+                    // install meter to R1 ovs1
+                    // DeviceId ovs1DevId = DeviceId.deviceId("of:0000000000000002");
+                    // // setting band
+                    // List<Band> bands = new LinkedList<Band>();
+                    // bands.add(DefaultBand.builder()
+                    //     .ofType(Band.Type.DROP)
+                    //     .withRate(1024)
+                    //     .burstSize(2048)
+                    //     .build());
+                    //     //  log.info("I am in meter of s4 - 2");
+                    // MeterRequest.Builder meterReq = DefaultMeterRequest.builder()
+                    //             .forDevice(ovs1DevId)
+                    //             .fromApp(appId)
+                    //             .withUnit(Unit.KB_PER_SEC)
+                    //             .burst()
+                    //             .withBands(bands);
+                    // Meter meter = meterService.submit(meterReq.add());
+                    
+                    // TrafficSelector selector = DefaultTrafficSelector.emptySelector();
+                        
+                    // TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                    //                     .setOutput(PortNumber.portNumber(3))
+                    //                     .meter(meter.id())
+                    //                     .build();
+                    //                     // log.info("I am in meter of s4 - 4");
+                    // FlowRule flowRule = DefaultFlowRule.builder()
+                    //             .forDevice(ovs1DevId)
+                    //             .fromApp(appId)
+                    //             .withSelector(selector)
+                    //             .withTreatment(treatment)
+                    //             .makePermanent()
+                    //             .withPriority(40000)
+                    //             .build();
+                    // flowRuleService.applyFlowRules(flowRule);
+
                 }
             }
         }
@@ -525,7 +606,7 @@ public class AppComponent{
             else{
                 selector = DefaultTrafficSelector.builder()
                             .matchEthType(Ethernet.TYPE_IPV6)
-                            .matchIPDst(dstIp.toIpPrefix())
+                            .matchIPv6Dst(dstIp.toIpPrefix())
                             .build();
             }
             TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
@@ -543,7 +624,7 @@ public class AppComponent{
                             .priority(50)
                             .build();
             intentService.submit(intent);
-            log.info("BGP message from " + ingress + " to " + egress);
+            log.info("BGP message from" + ingress + " to " + egress);
             return;
         } 
     }     

@@ -244,6 +244,7 @@ public class AppComponent{
                         // table miss
                         if(ndpCache.get(dstIp6Address) == null){                            
                             //send request to all edge ports
+                            log.info("In Point "+inPortPoint);
                             flood(ethPkt, inPortPoint);
                             
                             log.info("NDP TABLE MISS. Flood NDP NS");
@@ -263,7 +264,7 @@ public class AppComponent{
                         log.info("RECV NDP NA. Requested MAC = " + srcMac);
                     }
                 }
-                context.block();
+                // context.block();
                 return;
                 
             }
@@ -285,6 +286,7 @@ public class AppComponent{
             OutboundPacket outPkt = new DefaultOutboundPacket(
                 point.deviceId(), treatment, ByteBuffer.wrap(ethPacket.serialize()));
             // send to the specify port
+            log.info("Packet OUT"+ ethPacket.getDestinationMAC());
             packetService.emit(outPkt);
         }
         
@@ -299,9 +301,12 @@ public class AppComponent{
                     Ip4Address virtual_ip4 = config.getVip4();
                     Ip6Address virtual_ip6 = config.getVip6();
                     MacAddress virtual_mac = config.getVmac();
+                    
+
                     log.info("Virtual IPv4\t" + virtual_ip4);
                     log.info("Virtual IPv6\t" + virtual_ip6);
                     log.info("Virtual MAC\t" + virtual_mac);
+                    
 
                     arpTable.put(virtual_ip4, virtual_mac);
                     ndpCache.put(virtual_ip6, virtual_mac);
