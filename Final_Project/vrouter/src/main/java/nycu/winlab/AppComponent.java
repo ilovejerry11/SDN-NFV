@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nycu.sdnfv.vrouter;
+package nycu.winlab.vrouter;
 
 import org.onlab.packet.EthType;
 import org.onlab.packet.Ethernet;
@@ -164,7 +164,7 @@ public class AppComponent{
 
     @Activate
     protected void activate() {
-        appId = coreService.registerApplication("nycu.sdnfv.vrouter");
+        appId = coreService.registerApplication("nycu.winlab.vrouter");
         packetService.addProcessor(processor, PacketProcessor.director(5));
         cfgService.addListener(cfgListener);
         cfgService.registerConfigFactory(factory);

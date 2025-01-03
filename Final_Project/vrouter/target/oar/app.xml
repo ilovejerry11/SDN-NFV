@@ -14,7 +14,7 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<app name="nycu.sdnfv.vrouter" origin="NYCU sdnfv" version="1.0-SNAPSHOT"
+<app name="nycu.winlab.vrouter" origin="NYCU sdnfv" version="1.0-SNAPSHOT"
         title="vRouter APP" category="default" url="http://onosproject.org"
         featuresRepo="mvn:nycu.sdnfv/vrouter/1.0-SNAPSHOT/xml/features"
         features="vrouter" apps="org.onosproject.fpm">

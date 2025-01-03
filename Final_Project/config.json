@@ -76,7 +76,7 @@
         }
     },
     "apps": {
-        "nycu.sdnfv.vrouter": {
+        "nycu.winlab.vrouter": {
             "router": {
                 "vrrouting": "of:0000000000000001/2",
                 "vrrouting-mac": "e2:8b:4a:b7:22:b1",

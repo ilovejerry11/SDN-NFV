@@ -29,12 +29,12 @@ shell:
 install:
 	cd /home/demo/Documents/repository/Final_Project/ProxyArp && onos-app localhost install! target/ProxyArp-1.0-SNAPSHOT.oar || true
 	cd /home/demo/Documents/repository/Final_Project/bridge && onos-app localhost install! target/bridge-1.0-SNAPSHOT.oar || true
-	cd /home/demo/Documents/repository/Final_Project/vrouter && onos-app localhost install! target/vrouter-1.0-SNAPSHOT.oar || true
-	onos-netcfg localhost config.json
+	#cd /home/demo/Documents/repository/Final_Project/vrouter && onos-app localhost install! target/vrouter-1.0-SNAPSHOT.oar || true
+	#onos-netcfg localhost config.json
 ping:
 	sudo docker exec -it h1 ping -c3 172.16.18.69 # h1 ping FRR(R1)
 	# sudo docker exec -it h1 ping -c3 192.168.63.1 # h1 ping FRR(R1), but different subnet
-	sudo docker exec -it h1 ping -c3 172.16.18.2 # h1 ping h2
+	sudo docker exec -it h1 ping -c3 172.17.18.2 # h1 ping h2
 	sudo docker exec -it R2 ping -c3 192.168.63.1 # R2 ping FRR(R1)
 	# sudo docker exec -it R2 ping -c3 172.16.18.2 # R2 ping h1
 	sudo docker exec -it h2 ping -c3 172.16.18.2 # h2 ping h1

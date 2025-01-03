@@ -48,6 +48,7 @@ import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.packet.PacketProcessor;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.InboundPacket;
+import org.onosproject.net.ConnectPoint;
 
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.ICMP6;
@@ -139,7 +140,7 @@ public class AppComponent {
         selector.matchEthType(Ethernet.TYPE_IPV6);
         packetService.cancelPackets(selector.build(), PacketPriority.REACTIVE, appId);
 
-        log.info("Stopped");
+        log.info("[bridge]Stopped");
     }
 
     // Declare priority timeout etc.
@@ -170,41 +171,42 @@ public class AppComponent {
                         ! Ip6Prefix.valueOf("fd70::/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
                     ){
                         if(
-                            ! Ip6Prefix.valueOf("2a0b:4e0c:47:16::0/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
-                            ! Ip6Prefix.valueOf("2a0b:4e0c:47:16::0/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
+                            ! Ip6Prefix.valueOf("2a0b:4e0c:47:18::0/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
+                            ! Ip6Prefix.valueOf("2a0b:4e0c:47:18::0/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
                         ){
                             return;
                         }
                     }
                 }
 
-
-
-
                 if(ip6pkt.getNextHeader() == IPv6.PROTOCOL_ICMP6){
                     ICMP6 icmppkt =(ICMP6) ip6pkt.getPayload();
                     if (icmppkt.getIcmpType() == ICMP6.NEIGHBOR_SOLICITATION || icmppkt.getIcmpType() == ICMP6.NEIGHBOR_ADVERTISEMENT){
-                        log.info("NA and NS");           
+                        log.info("[bridge]NA and NS, return");           
                         return;
                     }
                 }
             }
-
-            IPv4 ip4pkt = (IPv4) context.inPacket().parsed().getPayload();
-            if(
-                ! Ip4Prefix.valueOf("172.16.16.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
-                ! Ip4Prefix.valueOf("172.16.16.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
-            ){
+            
+            if(context.inPacket().parsed().getEtherType() == Ethernet.TYPE_IPV4) {
+                IPv4 ip4pkt = (IPv4) context.inPacket().parsed().getPayload();
+                ConnectPoint receivedFrom = context.inPacket().receivedFrom();
+                log.info("[bridge] Packet received from: {}", receivedFrom);
                 if(
-                    ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
-                    ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
+                    ! Ip4Prefix.valueOf("172.16.18.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
+                    ! Ip4Prefix.valueOf("172.16.18.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
                 ){
                     if(
-                        ! Ip4Prefix.valueOf("192.168.70.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
-                        ! Ip4Prefix.valueOf("192.168.70.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
-                    )
-                    {
-                        return;
+                        ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
+                        ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
+                    ){
+                        if(
+                            ! Ip4Prefix.valueOf("192.168.70.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
+                            ! Ip4Prefix.valueOf("192.168.70.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
+                        )
+                        {
+                            return;
+                        }
                     }
                 }
             }
@@ -236,20 +238,20 @@ public class AppComponent {
 
                 // the mapping of pkt's src mac and receivedfrom port wasn't store in the table of the rec device
                 bridgeTable.get(recDevId).put(srcMac, recPort);
-                log.info("Add an entry to the port table of `" + recDevId +
+                log.info("[bridge] Add an entry to the port table of `" + recDevId +
                          "`. MAC address: `" + srcMac + "` => Port: `" + recPort + "`.");
             }
 
             if (bridgeTable.get(recDevId).get(dstMac) == null) {
                 // the mapping of dst mac and forwarding port wasn't store in the table of the rec device
                 flood(context);
-                log.info("MAC address `" + dstMac + "` is missed on `" + recDevId + "`. Flood the packet.");
+                log.info("[bridge] MAC address `" + dstMac + "` is missed on `" + recDevId + "`. Flood the packet.");
 
             } else if (bridgeTable.get(recDevId).get(dstMac) != null) {
                 // there is a entry store the mapping of dst mac and forwarding port
                 packetOut(context, bridgeTable.get(recDevId).get(dstMac));
                 installRule(recDevId, bridgeTable.get(recDevId).get(dstMac), srcMac, dstMac);
-                log.info("MAC address `" + dstMac + "` is matched on `" + recDevId + "`. Install a flow rule.");
+                log.info("[bridge] MAC address `" + dstMac + "` is matched on `" + recDevId + "`. Install a flow rule.");
             }
             // context.block();
         }

@@ -33,7 +33,7 @@
 
     <properties>
         <!-- Uncomment to generate ONOS app from this module. -->
-        <onos.app.name>nycu.sdnfv.vrouter</onos.app.name>
+        <onos.app.name>nycu.winlab.vrouter</onos.app.name>
         <onos.app.title>vRouter APP</onos.app.title>
         <onos.app.origin>NYCU sdnfv</onos.app.origin>
         <onos.app.category>default</onos.app.category>

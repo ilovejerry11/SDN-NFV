@@ -291,8 +291,8 @@ public class AppComponent{
             log.info("Packet OUT "+ ethPacket.getDestinationMAC());
             packetService.emit(outPkt);
         }
-        
     } 
+    
     public class proxyArpConfigListener implements NetworkConfigListener{
         @Override
         public void event(NetworkConfigEvent event){
@@ -315,10 +315,7 @@ public class AppComponent{
                     arpTable.put(virtual_ip4, virtual_mac);
                     ndpCache.put(virtual_ip6, virtual_mac);
                 }
-
-          }
-            
+            }
         }
-    }
-           
+    }   
 }
