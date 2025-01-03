@@ -51,7 +51,12 @@ import org.onosproject.net.packet.InboundPacket;
 
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.ICMP6;
+import org.onlab.packet.IPv4;
 import org.onlab.packet.IPv6;
+import org.onlab.packet.Ip4Prefix;
+import org.onlab.packet.Ip6Address;
+import org.onlab.packet.Ip6Prefix;
+import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
 
 import org.onosproject.net.PortNumber;
@@ -154,12 +159,51 @@ public class AppComponent {
             if(context.inPacket().parsed().getEtherType() == Ethernet.TYPE_ARP){
                 return;
             }
+
             if(context.inPacket().parsed().getEtherType() == Ethernet.TYPE_IPV6){
-                IPv6 pkt = (IPv6) context.inPacket().parsed().getPayload();
-                if(pkt.getNextHeader() == IPv6.PROTOCOL_ICMP6){
-                    ICMP6 icmppkt =(ICMP6) pkt.getPayload();
+                IPv6 ip6pkt = (IPv6) context.inPacket().parsed().getPayload();
+
+                if (! Ip6Prefix.valueOf("fd63::/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
+                    ! Ip6Prefix.valueOf("fd63::/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
+                ){
+                    if(! Ip6Prefix.valueOf("fd70::/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
+                        ! Ip6Prefix.valueOf("fd70::/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
+                    ){
+                        if(
+                            ! Ip6Prefix.valueOf("2a0b:4e0c:47:16::0/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
+                            ! Ip6Prefix.valueOf("2a0b:4e0c:47:16::0/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
+                        ){
+                            return;
+                        }
+                    }
+                }
+
+
+
+
+                if(ip6pkt.getNextHeader() == IPv6.PROTOCOL_ICMP6){
+                    ICMP6 icmppkt =(ICMP6) ip6pkt.getPayload();
                     if (icmppkt.getIcmpType() == ICMP6.NEIGHBOR_SOLICITATION || icmppkt.getIcmpType() == ICMP6.NEIGHBOR_ADVERTISEMENT){
                         log.info("NA and NS");           
+                        return;
+                    }
+                }
+            }
+
+            IPv4 ip4pkt = (IPv4) context.inPacket().parsed().getPayload();
+            if(
+                ! Ip4Prefix.valueOf("172.16.16.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
+                ! Ip4Prefix.valueOf("172.16.16.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
+            ){
+                if(
+                    ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
+                    ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
+                ){
+                    if(
+                        ! Ip4Prefix.valueOf("192.168.70.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
+                        ! Ip4Prefix.valueOf("192.168.70.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
+                    )
+                    {
                         return;
                     }
                 }
@@ -172,11 +216,11 @@ public class AppComponent {
                 return;
             }
 
-            if(ethPkt.getDestinationMAC() == MacAddress.valueOf("00:00:00:00:00:02"))
-            {   
-                log.info("TO gateway");
-                return;
-            }
+            // if(ethPkt.getDestinationMAC() == MacAddress.valueOf("00:00:00:00:00:02"))
+            // {   
+            //     log.info("TO gateway");
+            //     return;
+            // }
             
             DeviceId recDevId = pkt.receivedFrom().deviceId();
             PortNumber recPort = pkt.receivedFrom().port();

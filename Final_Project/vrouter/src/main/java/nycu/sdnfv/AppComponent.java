@@ -15,6 +15,7 @@
  */
 package nycu.sdnfv.vrouter;
 
+import org.onlab.packet.EthType;
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.ICMP6;
 import org.onlab.packet.IP;
@@ -23,6 +24,7 @@ import org.onlab.packet.IPv4;
 import org.onlab.packet.IPv6;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip6Address;
+import org.onlab.packet.Ip6Prefix;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.IpPrefix;
 import org.onlab.packet.MacAddress;
@@ -35,6 +37,7 @@ import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.FilteredConnectPoint;
 import org.onosproject.net.Host;
+import org.onosproject.net.HostId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
@@ -49,6 +52,8 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.intent.IntentService;
+import org.onosproject.net.intent.Key;
+import org.onosproject.net.intent.MultiPointToSinglePointIntent;
 import org.onosproject.net.intent.PointToPointIntent;
 import org.onosproject.net.intf.Interface;
 import org.onosproject.net.intf.InterfaceService;
@@ -85,6 +90,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -183,12 +189,10 @@ public class AppComponent{
     private void requestPacketIn(){
         TrafficSelector selector = DefaultTrafficSelector.builder()
                         .matchEthType(Ethernet.TYPE_IPV4)
-                        .matchEthDst(MacAddress.valueOf("00:00:00:00:00:02"))
                         .build();
         packetService.requestPackets(selector, PacketPriority.REACTIVE, appId);
         selector = DefaultTrafficSelector.builder()
                         .matchEthType(Ethernet.TYPE_IPV6)
-                        .matchEthDst(MacAddress.valueOf("00:00:00:00:00:02"))
                         .build();
         packetService.requestPackets(selector, PacketPriority.REACTIVE, appId);
     }
@@ -196,12 +200,10 @@ public class AppComponent{
     private void cancelPacketIn(){
         TrafficSelector selector = DefaultTrafficSelector.builder()
                         .matchEthType(Ethernet.TYPE_IPV4)
-                        .matchEthDst(MacAddress.valueOf("00:00:00:00:00:02"))
                         .build();
         packetService.cancelPackets(selector, PacketPriority.REACTIVE, appId);
         selector = DefaultTrafficSelector.builder()
                         .matchEthType(Ethernet.TYPE_IPV6)
-                        .matchEthDst(MacAddress.valueOf("00:00:00:00:00:02"))
                         .build();
         packetService.cancelPackets(selector, PacketPriority.REACTIVE, appId);
     }
@@ -252,15 +254,16 @@ public class AppComponent{
                     dstIp = Ip4Address.valueOf(ip4Pkt.getDestinationAddress());
                     log.info("Source Address" + srcIp);
                     log.info("Destination Address: " + dstIp);
+                    
                     // Drop BGP packet (BGP is based on TCP, check TCP packet)
-                    if(ip4Pkt.getProtocol() == IPv4.PROTOCOL_TCP){
-                        // BGP Protocol uses port 179
-                        TCP tcpPkt = (TCP) ip4Pkt.getPayload();
-                        if (tcpPkt.getDestinationPort() == 179){
-                            log.info("Drop BGP Packet");
-                            return;
-                        }
-                    }
+                    // if(ip4Pkt.getProtocol() == IPv4.PROTOCOL_TCP){
+                    //     // BGP Protocol uses port 179
+                    //     TCP tcpPkt = (TCP) ip4Pkt.getPayload();
+                    //     if (tcpPkt.getDestinationPort() == 179){
+                    //         log.info("Drop BGP Packet");
+                    //         return;
+                    //     }
+                    // }
             }
             else{
                 IPv6 ip6Pkt = (IPv6) ethPkt.getPayload();
@@ -268,14 +271,14 @@ public class AppComponent{
                 dstIp = Ip6Address.valueOf(ip6Pkt.getDestinationAddress());
                 log.info("Source Address" + srcIp);
                 log.info("Destination Address: " + dstIp);
-                if(ip6Pkt.getNextHeader() == IPv6.PROTOCOL_TCP){
-                    // BGP Protocol uses port 179
-                    TCP tcpPkt = (TCP) ip6Pkt.getPayload();
-                    if (tcpPkt.getDestinationPort() == 179){
-                        log.info("Drop BGP Packet");
-                        return;
-                    }
-                }
+                // if(ip6Pkt.getNextHeader() == IPv6.PROTOCOL_TCP){
+                //     // BGP Protocol uses port 179
+                //     TCP tcpPkt = (TCP) ip6Pkt.getPayload();
+                //     if (tcpPkt.getDestinationPort() == 179){
+                //         log.info("Drop BGP Packet");
+                //         return; 
+                //     }
+                // }
             }        
            
 
@@ -285,62 +288,157 @@ public class AppComponent{
             
             ResolvedRoute route = getRoute(dstIp);
             log.info("[VROUTER] DST MAC " + dstMac);
+            log.info("[VROUTER] DST IP " + dstIp);
+            log.info("[VROUTER] SRC IP " + srcIp);
+            log.info("[VROUTER] IP Prefix" + dstIp.toIpPrefix());
             log.info("[VROUTER] ROUTE: " + route);
             if(dstMac.equals(virtualMac)){ 
                 
-                if (route == null){ // if no info of the next hop -> local or no such host
-                    // Do Local
-                    if(ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
-                        IPv4 ip4Pkt = (IPv4) ethPkt.getPayload();
-                        local_dst_intent(ip4Pkt, inPoint);
-                    }
-                    else{
-                        IPv6 ip6Pkt = (IPv6) ethPkt.getPayload();
-                        local_dst_intent(ip6Pkt, inPoint);
-                    }                    
-                }
-                else{
-                    // Transit to Outside
-                    // Src is local (Seems like it doesn't matter)
-                    // if(getRoute(srcIp) == null){ 
-                        // from inside to outside  
-                        if(ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
-                            IPv4 ip4Pkt = (IPv4) ethPkt.getPayload();
-                            IpPrefix prefix = Ip4Address.valueOf(ip4Pkt.getDestinationAddress()).toIpPrefix();
-                            IpPrefix nextHopPrefix = route.nextHop().toIpPrefix();
-                            MacAddress nextHopMac = route.nextHopMac();
-                            transit_out_intnet(prefix, nextHopPrefix, nextHopMac, inPoint, Ethernet.TYPE_IPV4);
-                        }
-                        else{
-                            IPv6 ip6Pkt = (IPv6) ethPkt.getPayload();
-                            IpPrefix prefix = Ip6Address.valueOf(ip6Pkt.getDestinationAddress()).toIpPrefix();
-                            IpPrefix nextHopPrefix = route.nextHop().toIpPrefix();
-                            MacAddress nextHopMac = route.nextHopMac();
-                            transit_out_intnet(prefix, nextHopPrefix, nextHopMac, inPoint, Ethernet.TYPE_IPV6);
-                        }
-                    // }
-                    // else{
-                    //     // from one outside to another outside
-                    //     if(ethPkt.getEtherType() == Ethernet.TYPE_IPV4){
-                    //         IPv4 ip4Pkt = (IPv4) ethPkt.getPayload();
-                    //         IpPrefix dstPrefix = Ip4Address.valueOf(ip4Pkt.getDestinationAddress()).toIpPrefix();
-                    //         IpPrefix nextHopPrefix = route.nextHop().toIpPrefix();
-                    //         MacAddress nextHopMac = route.nextHopMac();
-                    //         transit_out_intnet(dstPrefix, nextHopPrefix, nextHopMac, inPoint, Ethernet.TYPE_IPV4);
-                    //     }
-                    //     else{
-                            
+                log.info("[VROUTER] Detected sdn to external packet!");
+                create_internal_to_external_intent(srcMac, dstIp);
+                
+            }else if (dstMac.equals(frrMac)){
+                log.info("[VROUTER] Detected external packet");
 
-                    //     }
-                        
-                        
-                    // }
-                    
+                if (Ip6Prefix.valueOf(virtualIp6Addr, 64).contains(dstIp)){
+                    log.info("[VROUTER] to internal");
+
+                    create_external_to_internal_intent(dstIp, inPoint);
+
                 }
+
+                create_transit_intent(dstIp, inPoint);
             }
             
+        }
 
-            // context.block();
+        private void create_external_to_internal_intent(IpAddress dstIp, ConnectPoint inPoint) {
+
+            if (intentService.getIntent(
+                Key.of("INTER_BACK_" + dstIp + "_" + inPoint, appId)
+            ) != null){
+                return;
+            }
+
+            TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+
+            if (dstIp.isIp4()){
+                selector
+                    .matchEthType(Ethernet.TYPE_IPV4)
+                    .matchIPDst(dstIp.toIpPrefix());
+            } else {
+                selector
+                    .matchEthType(Ethernet.TYPE_IPV6)
+                    .matchIPv6Dst(dstIp.toIpPrefix());
+            }
+
+            Host destination = hostService.getHostsByIp(dstIp).iterator().next();
+
+            TrafficTreatment.Builder treatment = DefaultTrafficTreatment.builder()
+                .setEthSrc(virtualMac)
+                .setEthDst(destination.mac());
+
+            PointToPointIntent intent = PointToPointIntent.builder()
+                .appId(appId)
+                .key(Key.of("INTER_BACK_" + dstIp + "_" + inPoint, appId))
+                .filteredIngressPoint(new FilteredConnectPoint(inPoint))
+                .filteredEgressPoint(new FilteredConnectPoint(destination.location()))
+                .selector(selector.build())
+                .treatment(treatment.build())
+                .priority(20)
+                .build();
+
+            intentService.submit(intent);
+        }
+
+        private void create_internal_to_external_intent(MacAddress srcMac, IpAddress dstIp) {
+
+            ResolvedRoute route = getRoute(dstIp);
+
+            if (route == null){
+                log.warn("[VROUTER] No route found for " + dstIp);
+                return;
+            }
+
+            if (intentService.getIntent(Key.of("INTER_OUT_" + srcMac + "_" + route.prefix(), appId)) != null){
+                return;
+            }
+
+            TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+
+            if (dstIp.isIp4()){
+                selector
+                    .matchEthType(Ethernet.TYPE_IPV4)
+                    .matchIPDst(route.prefix());
+            } else {
+                selector
+                    .matchEthType(Ethernet.TYPE_IPV6)
+                    .matchIPv6Dst(route.prefix());
+            }
+
+            TrafficTreatment.Builder treatment = DefaultTrafficTreatment.builder()
+                .setEthSrc(frrMac)
+                .setEthDst(route.nextHopMac());
+            
+            PointToPointIntent intent = PointToPointIntent.builder()
+                .appId(appId)
+                .key(Key.of("INTER_OUT_" + srcMac + "_" + route.prefix(), appId))
+                .filteredEgressPoint(new FilteredConnectPoint(interfaceService.getMatchingInterface(route.nextHop()).connectPoint()))
+                .filteredIngressPoint(new FilteredConnectPoint(hostService.getHostsByMac(srcMac).iterator().next().location()))
+                .selector(selector.build())
+                .treatment(treatment.build())
+                .priority(20)
+                .build();
+
+            intentService.submit(intent);
+
+        }
+
+        private void create_transit_intent(IpAddress dstIp, ConnectPoint inPoint) {
+            
+            ResolvedRoute route = getRoute(dstIp);
+
+            if (route == null){
+                log.warn("[VROUTER] No route found for " + dstIp);
+                return;
+            }
+
+            if (intentService.getIntent(Key.of("TRANSIT_" + route.prefix(), appId)) != null){
+                return;
+            }
+
+            TrafficSelector.Builder selector = DefaultTrafficSelector.builder().matchEthDst(frrMac);
+
+            if (dstIp.isIp4()){
+                selector
+                    .matchEthType(Ethernet.TYPE_IPV4)
+                    .matchIPDst(route.prefix());
+            } else {
+                selector
+                    .matchEthType(Ethernet.TYPE_IPV6)
+                    .matchIPv6Dst(route.prefix());
+            }
+
+
+            Set<FilteredConnectPoint> ingressPoints = new HashSet<>();
+            ConnectPoint egressPoint = interfaceService.getMatchingInterface(route.nextHop()).connectPoint();
+
+            for (Interface intface : interfaceService.getInterfaces()) {
+                if (intface.connectPoint().equals(egressPoint)){
+                    continue;
+                }
+                ingressPoints.add(new FilteredConnectPoint(intface.connectPoint()));
+            }
+
+            MultiPointToSinglePointIntent intent = MultiPointToSinglePointIntent.builder()
+                .appId(appId)
+                .key(Key.of("TRANSIT_" + route.prefix(), appId))
+                .filteredEgressPoint(new FilteredConnectPoint(interfaceService.getMatchingInterface(route.nextHop()).connectPoint()))
+                .filteredIngressPoints(ingressPoints)
+                .build();
+
+            intentService.submit(intent);
+
         }
 
         private ResolvedRoute getRoute(IpAddress dstIp){
@@ -351,156 +449,17 @@ public class AppComponent{
                 // check each routing tavle's route
                 Collection<RouteInfo> routes = routeService.getRoutes(Id);
                 for (RouteInfo route: routes){
+                    log.info("[VROUTER] Checking routes " + route.prefix() + " container " + prefix);
                     if(route.prefix().contains(prefix)){
                         // If the prefix exists
+                        log.info("[VROUTER] Found Route for " + route.prefix());
                         return route.bestRoute().get();
                     }
                 }
             }
             return null;
         }
-        
-        private void local_dst_intent(IPv4 ip4Pkt, ConnectPoint ingress){
-            // from outside to SDN domain
-            // e.g. from h2 to h1
-            // change src mac to gateway mac (virtual mac)
-            // change dst mac to correct mac (host's mac)
-
-            Ip4Address dstIp = Ip4Address.valueOf((ip4Pkt.getDestinationAddress()));
-
-            Set<Host> hosts = hostService.getHostsByIp(dstIp);
-            Host dstHost = hosts.iterator().next(); // get first one
-            if(hosts.isEmpty()){
-                log.info("No Host at " + dstIp + ".");
-                return;
-            }
-            log.info(hosts.size() + " Hosts.");
-            for(Host host: hosts){
-                log.info("Dst IP Hosts: " + host + ". IP: " + host.ipAddresses() + " MAC: " + host.mac());
-            }
-            MacAddress dstHostMac = dstHost.mac();
-            ConnectPoint dstHostCP = ConnectPoint.fromString(dstHost.location().toString());
-            log.info("Host Location" + dstHost.location().toString());
-            
-
-            TrafficSelector selector = DefaultTrafficSelector.builder()
-                                .matchEthType(Ethernet.TYPE_IPV4)
-                                .matchIPDst(dstIp.toIpPrefix())
-                                .build();
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                                .setEthSrc(virtualMac)     
-                                .setEthDst(dstHostMac)
-                                .build();
-            FilteredConnectPoint ingressCP = new FilteredConnectPoint(ingress);
-            FilteredConnectPoint engressCP = new FilteredConnectPoint(dstHostCP);
-
-            PointToPointIntent intent = PointToPointIntent.builder()
-                            .appId(appId)
-                            .filteredIngressPoint(ingressCP)
-                            .filteredEgressPoint(engressCP)
-                            .selector(selector)
-                            .treatment(treatment)
-                            .priority(50)
-                            .build();
-            log.info("From " + virtualMac + " to " + dstHostMac);
-            log.info("From " + ingressCP.toString() + " to " + engressCP.toString());
-            intentService.submit(intent);
-            log.info("IPv4 Intent submitted.");
-        }
-
-        private void local_dst_intent(IPv6 ip6Pkt, ConnectPoint ingress){
-            // change src mac to gateway mac (virtual mac)
-            // change dst mac to correct mac (host's mac)
-            Ip6Address dstIp = Ip6Address.valueOf((ip6Pkt.getDestinationAddress()));
-
-            Set<Host> hosts = hostService.getHostsByIp(dstIp);
-            Host dstHost = hosts.iterator().next(); // get first one
-            if(hosts.isEmpty()){
-                log.info("No Host at " + dstIp + ".");
-                return;
-            }
-            log.info(hosts.size() + " Hosts.");
-            for(Host host: hosts){
-                log.info("Dst IP Hosts: " + host + ". IP: " + host.ipAddresses() + " MAC: " + host.mac());
-            }
-            MacAddress dstHostMac = dstHost.mac();
-            ConnectPoint dstHostCP = ConnectPoint.fromString(dstHost.location().toString());
-            log.info("Host Location" + dstHost.location().toString());
-            
-
-            TrafficSelector selector = DefaultTrafficSelector.builder()
-                                .matchEthType(Ethernet.TYPE_IPV6)
-                                .matchIPv6Dst(dstIp.toIpPrefix())
-                                .build();
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                                .setEthSrc(virtualMac)     
-                                .setEthDst(dstHostMac)
-                                .build();
-            FilteredConnectPoint ingressCP = new FilteredConnectPoint(ingress);
-            FilteredConnectPoint engressCP = new FilteredConnectPoint(dstHostCP);
-
-            PointToPointIntent intent = PointToPointIntent.builder()
-                            .appId(appId)
-                            .filteredIngressPoint(ingressCP)
-                            .filteredEgressPoint(engressCP)
-                            .selector(selector)
-                            .treatment(treatment)
-                            .priority(50)
-                            .build();
-            
-            log.info("From " + virtualMac + " to " + dstHostMac);
-            log.info("From " + ingressCP.toString() + " to " + engressCP.toString());
-            intentService.submit(intent);
-            log.info("IPv6 Intent submitted.");
-        }
-
-        private void transit_out_intnet(IpPrefix dstIpPrefix, IpPrefix nextHopIpPrefix, MacAddress nextHopMac, ConnectPoint ingress, short type){
-            //  from local to outside AS
-            //  e.g h1 to h2 (its dst ip must be router ip, that is virtual ip)
-            //  change its dst mac to the R1/TA/TEAM dst
-            //  change its src mac to virtual gateway mac 
-            //  get edge router CP by dstIp Prefix (eg h1 to h2 172.17.16.2, but R1 gateway ip is 172.17.16.1)
-            //  only change L2 address **DO NOT CHANGE IP**
-
-            //  *****maybe we need to use route service to find next hop or mac*****
-            
-            ConnectPoint dstRouterCP = edgeRouterCP.get(nextHopIpPrefix);
-            
-            TrafficSelector selector = DefaultTrafficSelector.emptySelector();
-            if (type == Ethernet.TYPE_IPV4) {
-               selector = DefaultTrafficSelector.builder()
-                                .matchEthType(type)
-                                .matchIPDst(dstIpPrefix)
-                                .build(); 
-            }
-            else{
-                selector = DefaultTrafficSelector.builder()
-                                .matchEthType(type)
-                                .matchIPv6Dst(dstIpPrefix)
-                                .build(); 
-            }
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                                .setEthSrc(virtualMac)
-                                .setEthDst(nextHopMac) // need to find a way to get the mac address of edge router like R1/TA
-                                .build();
-
-            FilteredConnectPoint ingressCP = new FilteredConnectPoint(ingress);
-            FilteredConnectPoint egressCP = new FilteredConnectPoint(dstRouterCP);
-            PointToPointIntent intent = PointToPointIntent.builder()
-                                .appId(appId)
-                                .filteredIngressPoint(ingressCP)
-                                .filteredEgressPoint(egressCP)
-                                .selector(selector)
-                                .treatment(treatment)
-                                .priority(50)
-                                .build();
-            log.info("From " + virtualMac + " to " + nextHopMac);
-            log.info("From " + ingressCP.toString() + " to " + egressCP.toString());
-            intentService.submit(intent);
-            log.info("TO OUTSIDE Intent submitted.");
-        }
     }
-
 
     public class vRouterConfigLinster implements NetworkConfigListener{
         @Override
@@ -522,6 +481,7 @@ public class AppComponent{
                     log.info("Virtual Gateway Mac: " + virtualMac);
                     log.info("Virtual Gateway IPv4: " + virtaulIp4Addr);
                     log.info("Virtual Gateway IPv6: " + virtualIp6Addr);
+                    log.info("[BGP INTENT] Listing BGP intents");
 
                     for(Ip4Address ip : v4Peers){
                         log.info("IPv4 Peers: " + ip);
@@ -529,71 +489,83 @@ public class AppComponent{
                     for(Ip6Address ip : v6Peers){
                         log.info("IPv6 Peers: " + ip);
                     }
+                    log.info("[BGP INTENT] Adding IPv4 " + v4Peers.size() + " Peers");
                     // set intent between Frr and Peers (other AS's router)
                     for(int i = 0; i < v4Peers.size(); i+=2){
                         Ip4Address peerIp = v4Peers.get(i);
                         Ip4Address frrIp = v4Peers.get(i+1);
                         Interface itf = interfaceService.getMatchingInterface(peerIp);
-                        // use interface service to get the connect point's interface
                         Interface frritf = interfaceService.getMatchingInterface(frrIp);
-                        // from FRR to Peer(other router)
-                        bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), peerIp);
-                        // from Peer(other router) to FRR
-                        bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), frrIp);
-                        // add the infomation of edge router's IP and CP
+
+                        log.info("[BGP INTENT] connecting v4 BGP from " + peerIp + " to " + frrIp );
+                        log.info("[BGP INTENT] connect V4 BGP from " + frritf.connectPoint() + " to " + itf.connectPoint());
+                    
+                        bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), frrIp);
+                        bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), peerIp);
+                        // bpgIntentInstallARP(itf.connectPoint(), frritf.connectPoint());
                         edgeRouterCP.put(peerIp.toIpPrefix(), itf.connectPoint());
                     }
-                    // for(Ip6Address peerIp: v6Peers){
+                    log.info("[BGP INTENT] Adding IPv6 " + v6Peers.size() + " Peers");
                     for(int i = 0; i < v6Peers.size(); i+=2){
                         Ip6Address peerIp = v6Peers.get(i);
                         Ip6Address frrIp = v6Peers.get(i+1);
                         Interface itf = interfaceService.getMatchingInterface(peerIp);
                         Interface frritf = interfaceService.getMatchingInterface(frrIp);
-                        // from FRR to Peer(other router)
+
+                        log.info("[BGP INTENT] connecting v6 BGP from " + peerIp + " to " + frrIp );
+                        log.info("[BGP INTENT] connect V6 BGP from " + frritf.connectPoint() + " to " + itf.connectPoint());
+
                         bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), frrIp);
-                        // from Peer(other router) to FRR
                         bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), peerIp);
+                        // bpgIntentInstallNDP(itf.connectPoint(), frritf.connectPoint()); 
                         edgeRouterCP.put(peerIp.toIpPrefix(), itf.connectPoint());
                     }
-
-                    // install meter to R1 ovs1
-                    // DeviceId ovs1DevId = DeviceId.deviceId("of:0000000000000002");
-                    // // setting band
-                    // List<Band> bands = new LinkedList<Band>();
-                    // bands.add(DefaultBand.builder()
-                    //     .ofType(Band.Type.DROP)
-                    //     .withRate(1024)
-                    //     .burstSize(2048)
-                    //     .build());
-                    //     //  log.info("I am in meter of s4 - 2");
-                    // MeterRequest.Builder meterReq = DefaultMeterRequest.builder()
-                    //             .forDevice(ovs1DevId)
-                    //             .fromApp(appId)
-                    //             .withUnit(Unit.KB_PER_SEC)
-                    //             .burst()
-                    //             .withBands(bands);
-                    // Meter meter = meterService.submit(meterReq.add());
-                    
-                    // TrafficSelector selector = DefaultTrafficSelector.emptySelector();
-                        
-                    // TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    //                     .setOutput(PortNumber.portNumber(3))
-                    //                     .meter(meter.id())
-                    //                     .build();
-                    //                     // log.info("I am in meter of s4 - 4");
-                    // FlowRule flowRule = DefaultFlowRule.builder()
-                    //             .forDevice(ovs1DevId)
-                    //             .fromApp(appId)
-                    //             .withSelector(selector)
-                    //             .withTreatment(treatment)
-                    //             .makePermanent()
-                    //             .withPriority(40000)
-                    //             .build();
-                    // flowRuleService.applyFlowRules(flowRule);
 
                 }
             }
         }
+
+        private void bpgIntentInstallARP(ConnectPoint a, ConnectPoint b){
+            TrafficSelector selector = DefaultTrafficSelector.builder()
+                        .matchEthType(Ethernet.TYPE_ARP)
+                        .build();
+            TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
+            FilteredConnectPoint ingressPoint = new FilteredConnectPoint(a);
+            FilteredConnectPoint egressPoint = new FilteredConnectPoint(b);
+            PointToPointIntent intent = PointToPointIntent.builder()
+                        .appId(appId)
+                        .key(Key.of("ARP_" + a + "_" + b, appId))
+                        .filteredIngressPoint(ingressPoint)
+                        .filteredEgressPoint(egressPoint)
+                        .selector(selector)
+                        .treatment(treatment)
+                        .priority(20)
+                        .build();
+            intentService.submit(intent);
+            return;
+        }
+
+        private void bpgIntentInstallNDP(ConnectPoint a, ConnectPoint b){
+            TrafficSelector selector = DefaultTrafficSelector.builder()
+                        .matchEthType(Ethernet.TYPE_IPV6)
+                        .matchIPProtocol(IPv6.PROTOCOL_ICMP6)
+                        .build();
+            TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
+            FilteredConnectPoint ingressPoint = new FilteredConnectPoint(a);
+            FilteredConnectPoint egressPoint = new FilteredConnectPoint(b);
+            PointToPointIntent intent = PointToPointIntent.builder()
+                        .appId(appId)
+                        .key(Key.of("NDP_" + a + "_" + b, appId))
+                        .filteredIngressPoint(ingressPoint)
+                        .filteredEgressPoint(egressPoint)
+                        .selector(selector)
+                        .treatment(treatment)
+                        .priority(20)
+                        .build();
+            intentService.submit(intent);
+            return;
+        }
+
         private void bgpIntentInstall(ConnectPoint ingress, ConnectPoint egress, IpAddress dstIp){
             // Handle BGP messages
             TrafficSelector selector;
@@ -613,15 +585,15 @@ public class AppComponent{
             
             FilteredConnectPoint ingressPoint = new FilteredConnectPoint(ingress);
             FilteredConnectPoint egressPoint = new FilteredConnectPoint(egress);
-
            
             PointToPointIntent intent = PointToPointIntent.builder()
                             .appId(appId)
+                            .key(Key.of("BGP_" + ingress + "_" + egress, appId))
                             .filteredIngressPoint(ingressPoint)
                             .filteredEgressPoint(egressPoint)
                             .selector(selector)
                             .treatment(treatment)
-                            .priority(50)
+                            .priority(20)
                             .build();
             intentService.submit(intent);
             log.info("BGP message from" + ingress + " to " + egress);
