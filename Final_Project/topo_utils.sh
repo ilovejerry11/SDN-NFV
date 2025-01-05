@@ -141,8 +141,8 @@ add_container $HOSTIMAGE h2
 
 build_ovs_container_path ovs1 R1 172.16.18.69/24 #"" #"-h1" 2a0b:4e07:c4:18::69/64
 set_v6intf_container R1 vethR1ovs1 2a0b:4e07:c4:18::69/64
-build_ovs_container_path ovs2 h1 172.16.18.2/24 #172.16.18.69 
-set_v6intf_container h1 vethh1ovs2 2a0b:4e07:c4:18::2/64 #2a0b:4e07:c4:18::69
+build_ovs_container_path ovs2 h1 172.16.18.2/24 172.16.18.1
+set_v6intf_container h1 vethh1ovs2 2a0b:4e07:c4:18::2/64 2a0b:4e07:c4:18::1
 
 set_v4intf_container R1 vethR1ovs1 192.168.63.1/24 #"" "-R2" fd63::1/64
 set_v6intf_container R1 vethR1ovs1 fd63::1/64

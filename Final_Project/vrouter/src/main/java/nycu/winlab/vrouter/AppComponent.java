@@ -500,8 +500,8 @@ public class AppComponent{
                         log.info("[BGP INTENT] connecting v4 BGP from " + peerIp + " to " + frrIp );
                         log.info("[BGP INTENT] connect V4 BGP from " + frritf.connectPoint() + " to " + itf.connectPoint());
                     
-                        bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), frrIp);
-                        bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), peerIp);
+                        bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), peerIp);
+                        bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), frrIp);
                         // bpgIntentInstallARP(itf.connectPoint(), frritf.connectPoint());
                         edgeRouterCP.put(peerIp.toIpPrefix(), itf.connectPoint());
                     }
@@ -515,8 +515,8 @@ public class AppComponent{
                         log.info("[BGP INTENT] connecting v6 BGP from " + peerIp + " to " + frrIp );
                         log.info("[BGP INTENT] connect V6 BGP from " + frritf.connectPoint() + " to " + itf.connectPoint());
 
-                        bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), frrIp);
-                        bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), peerIp);
+                        bgpIntentInstall(frritf.connectPoint(), itf.connectPoint(), peerIp);
+                        bgpIntentInstall(itf.connectPoint(), frritf.connectPoint(), frrIp);
                         // bpgIntentInstallNDP(itf.connectPoint(), frritf.connectPoint()); 
                         edgeRouterCP.put(peerIp.toIpPrefix(), itf.connectPoint());
                     }
@@ -588,7 +588,7 @@ public class AppComponent{
            
             PointToPointIntent intent = PointToPointIntent.builder()
                             .appId(appId)
-                            .key(Key.of("BGP_" + ingress + "_" + egress, appId))
+                            .key(Key.of("BGP_" + ingress + "_" + egress + "_" + dstIp, appId))
                             .filteredIngressPoint(ingressPoint)
                             .filteredEgressPoint(egressPoint)
                             .selector(selector)
