@@ -167,16 +167,16 @@ public class AppComponent {
                 if (! Ip6Prefix.valueOf("fd63::/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
                     ! Ip6Prefix.valueOf("fd63::/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
                 ){
-                    if(! Ip6Prefix.valueOf("fd70::/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
-                        ! Ip6Prefix.valueOf("fd70::/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
-                    ){
+                    // if(! Ip6Prefix.valueOf("fd70::/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
+                    //     ! Ip6Prefix.valueOf("fd70::/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
+                    // ){
                         if(
                             ! Ip6Prefix.valueOf("2a0b:4e07:c4:18::0/64").contains(Ip6Address.valueOf(ip6pkt.getSourceAddress())) ||
                             ! Ip6Prefix.valueOf("2a0b:4e07:c4:18::0/64").contains(Ip6Address.valueOf(ip6pkt.getDestinationAddress()))
                         ){
                             return;
                         }
-                    }
+                    // }
                 }
 
                 if(ip6pkt.getNextHeader() == IPv6.PROTOCOL_ICMP6){
@@ -196,10 +196,10 @@ public class AppComponent {
                     ! Ip4Prefix.valueOf("172.16.18.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
                     ! Ip4Prefix.valueOf("172.16.18.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
                 ){
-                    if(
-                        ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
-                        ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
-                    ){
+                    // if(
+                    //     ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
+                    //     ! Ip4Prefix.valueOf("192.168.63.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
+                    // ){
                         if(
                             ! Ip4Prefix.valueOf("192.168.70.0/24").contains(IpAddress.valueOf(ip4pkt.getSourceAddress())) ||
                             ! Ip4Prefix.valueOf("192.168.70.0/24").contains(IpAddress.valueOf(ip4pkt.getDestinationAddress()))
@@ -208,7 +208,7 @@ public class AppComponent {
                             return;
                         }
                     }
-                }
+                // }
             }
     
             InboundPacket pkt = context.inPacket();

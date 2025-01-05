@@ -23,6 +23,7 @@ import org.onlab.packet.IPacket;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IPv6;
 import org.onlab.packet.Ip4Address;
+import org.onlab.packet.Ip4Prefix;
 import org.onlab.packet.Ip6Address;
 import org.onlab.packet.Ip6Prefix;
 import org.onlab.packet.IpAddress;
@@ -301,15 +302,20 @@ public class AppComponent{
                 log.info("[VROUTER] Detected external packet");
 
                 if (Ip6Prefix.valueOf(virtualIp6Addr, 64).contains(dstIp)){
-                    log.info("[VROUTER] to internal");
+                    log.info("[VROUTER] v6 to internal");
 
                     create_external_to_internal_intent(dstIp, inPoint);
 
-                }
+                } else if (Ip4Prefix.valueOf(virtaulIp4Addr, 24).contains(dstIp)) {
+                    log.info("[VROUTER] v4 to internal");
 
-                create_transit_intent(dstIp, inPoint);
+                    create_external_to_internal_intent(dstIp, inPoint);
+                } else {
+                    log.info("[VROUTER] v4 transit");
+
+                    create_transit_intent(dstIp, inPoint);
+                }
             }
-            
         }
 
         private void create_external_to_internal_intent(IpAddress dstIp, ConnectPoint inPoint) {
@@ -453,7 +459,7 @@ public class AppComponent{
                     if(route.prefix().contains(prefix)){
                         // If the prefix exists
                         log.info("[VROUTER] Found Route for " + route.prefix());
-                        return route.bestRoute().get();
+                        return route.allRoutes().iterator().next();
                     }
                 }
             }
