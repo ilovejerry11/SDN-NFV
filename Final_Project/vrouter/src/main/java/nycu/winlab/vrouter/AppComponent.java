@@ -293,6 +293,7 @@ public class AppComponent{
             log.info("[VROUTER] SRC IP " + srcIp);
             log.info("[VROUTER] IP Prefix" + dstIp.toIpPrefix());
             log.info("[VROUTER] ROUTE: " + route);
+            // log.info("[VROUTER] frr" + frrMac);
             if(dstMac.equals(virtualMac)){ 
                 
                 log.info("[VROUTER] Detected sdn to external packet!");

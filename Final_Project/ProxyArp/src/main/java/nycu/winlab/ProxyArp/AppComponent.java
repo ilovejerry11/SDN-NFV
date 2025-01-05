@@ -132,7 +132,7 @@ public class AppComponent{
         // Add controller <IP, Mac> to ARP table
         // arpTable.put(Ip4Address.valueOf("192.168.100.1"), MacAddress.valueOf( "92:84:fa:c8:7f:f3"));
         Ip4Address virtual_ip4 = Ip4Address.valueOf("172.16.18.1");
-        Ip6Address virtual_ip6 = Ip6Address.valueOf("ff02::1:ff00:1");
+        Ip6Address virtual_ip6 = Ip6Address.valueOf("ff02::1:ff00:fe");
         MacAddress virtual_mac = MacAddress.valueOf("00:00:00:00:00:02");
         arpTable.put(virtual_ip4, virtual_mac);
         ndpCache.put(virtual_ip6, virtual_mac);

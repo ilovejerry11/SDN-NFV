@@ -25,7 +25,7 @@
                     "ips": [
                         "192.168.63.2/32",
                         "fd63::2/128",
-                        "fe80::e8b4:aeff:feb8:120d/128"
+                        "fe80::58cf:dff:fea5:fcad/128"
                     ]
                 }
             ]
@@ -78,7 +78,7 @@
         "nycu.winlab.vrouter": {
             "router": {
                 "vrrouting": "of:0000000000000001/2",
-                "vrrouting-mac": "e2:8b:4a:b7:22:b1",
+                "vrrouting-mac": "ce:cd:b3:b0:fe:5e",
                 "vrrouting-ip":"172.16.18.69",
                 "gateway-ip4": "172.16.18.1",
                 "gateway-ip6": "2a0b:4e07:c4:18::1",
@@ -104,10 +104,10 @@
                     "of:000056d287ab2546/3"
                 ],
                 "virtual-ip4": "172.16.18.1",
-                "virtual-ip6": "ff02::1:ff00:1",
+                "virtual-ip6": "ff02::1:ff00:fe",
                 "virtual-ip6-adv": "2a0b:4e07:c4:18::1",
                 "virtual-mac": "00:00:00:00:00:02",
-                "frr-mac": "e2:8b:4a:b7:22:b1"
+                "frr-mac": "ce:cd:b3:b0:fe:5e"
             }
         }
     }
