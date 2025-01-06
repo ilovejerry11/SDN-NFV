@@ -98,13 +98,13 @@
                 ]
             }
         },
-        "nycu.winlab.proxyarp": {
+        "nycu.winlab.ProxyArp": {
             "virtual-arps": {
                 "edge-ports":[
                     "of:000056d287ab2546/3"
                 ],
                 "virtual-ip4": "172.16.18.1",
-                "virtual-ip6": "ff02::1:ff00:fe",
+                "virtual-ip6": "ff02::1:ff00:1",
                 "virtual-ip6-adv": "2a0b:4e07:c4:18::1",
                 "virtual-mac": "00:00:00:00:00:02",
                 "frr-mac": "ce:cd:b3:b0:fe:5e"

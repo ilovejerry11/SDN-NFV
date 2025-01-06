@@ -162,8 +162,8 @@ set_v6intf_container h2 vethh2R2 2a0b:4e07:c4:118::2/64 2a0b:4e07:c4:118::1
 set_intf_container R2 vethR2h2 172.17.18.1/24 
 set_v6intf_container R2 vethR2h2 2a0b:4e07:c4:118::1/64
 
-docker exec R1 sysctl -w net.ipv4.ip_forward=1
-docker exec R1 sysctl -w net.ipv6.conf.all.forwarding=1
+docker exec R2 sysctl -w net.ipv4.ip_forward=1
+docker exec R2 sysctl -w net.ipv6.conf.all.forwarding=1
 
 # Add Routes on R1 and R2
 # sudo docker exec -it R1 ip route add 172.17.18.0/24 via 192.168.63.2

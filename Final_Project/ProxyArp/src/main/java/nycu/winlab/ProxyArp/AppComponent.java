@@ -132,7 +132,7 @@ public class AppComponent{
         // Add controller <IP, Mac> to ARP table
         // arpTable.put(Ip4Address.valueOf("192.168.100.1"), MacAddress.valueOf( "92:84:fa:c8:7f:f3"));
         Ip4Address virtual_ip4 = Ip4Address.valueOf("172.16.18.1");
-        Ip6Address virtual_ip6 = Ip6Address.valueOf("ff02::1:ff00:fe");
+        Ip6Address virtual_ip6 = Ip6Address.valueOf("ff02::1:ff00:1");
         MacAddress virtual_mac = MacAddress.valueOf("00:00:00:00:00:02");
         arpTable.put(virtual_ip4, virtual_mac);
         ndpCache.put(virtual_ip6, virtual_mac);
@@ -238,6 +238,11 @@ public class AppComponent{
                         log.info("[NDP]NS Packet Detected from " + dstIp6Address);
                         log.info("[NDP]NS Packet Detected cache: " + ndpCache.get(dstIp6Address));
                         log.info("[NDP]NS Packet from In Point " + inPortPoint);
+
+                        log.info("[ND_DEBUG] NS Cache List:");
+                        for (var entry: ndpCache.entrySet() ){
+                            log.info("[ND_DEBUG] IP: " + entry.getKey() + "\t\tMAC: " + entry.getValue());
+                        }
                         // table miss
                         if(ndpCache.get(dstIp6Address) == null){                            
                             //send request to all edge ports
