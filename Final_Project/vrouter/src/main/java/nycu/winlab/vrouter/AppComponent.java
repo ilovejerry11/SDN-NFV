@@ -442,6 +442,8 @@ public class AppComponent{
                 .key(Key.of("TRANSIT_" + route.prefix(), appId))
                 .filteredEgressPoint(new FilteredConnectPoint(interfaceService.getMatchingInterface(route.nextHop()).connectPoint()))
                 .filteredIngressPoints(ingressPoints)
+                .selector(selector.build())
+                .priority(10)
                 .build();
 
             intentService.submit(intent);

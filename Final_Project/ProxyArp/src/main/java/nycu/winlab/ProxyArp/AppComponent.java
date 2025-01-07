@@ -280,9 +280,9 @@ public class AppComponent{
             // packet out except for input point            
             for(ConnectPoint edgePoint: edgeService.getEdgePoints()){
 
-                // if(edgePorts.contains(edgePoint)){
-                //     continue;
-                // }
+                if(edgePorts.contains(edgePoint)){
+                    continue;
+                }
 
                 if(!edgePoint.equals(point)){ // [?] where to flood? why skip edgePorts?
                     log.info("[NDP] FLOOD to "+ edgePoint);

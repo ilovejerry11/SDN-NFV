@@ -155,6 +155,9 @@ set_v6intf_container R1 vethR1ovs1 fd70::18/64
 set_v4intf_container R1 vethR1ovs1 192.168.100.3/24 #"" "-onos"
 set_v6intf_container R1 vethR1ovs1
 
+set_v4intf_container R1 vethR1ovs1 192.168.87.18/24 #"" "-TM" 
+set_v6intf_container R1 vethR1ovs1 fd87::18/64
+
 # build h2-R2 path
 create_veth_pair vethh2R2 vethR2h2
 set_intf_container h2 vethh2R2 172.17.18.2/24 172.17.18.1
