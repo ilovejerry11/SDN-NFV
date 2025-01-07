@@ -98,6 +98,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import javax.crypto.Mac;
+
 import static org.onlab.util.Tools.get;
 import static org.onlab.util.Tools.log;
 import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_ADDED;
@@ -265,6 +267,9 @@ public class AppComponent{
                     //         return;
                     //     }
                     // }
+                    if(Ip4Prefix.valueOf(srcIp, 24).contains(dstIp)) {
+                        return;
+                    }
             }
             else{
                 IPv6 ip6Pkt = (IPv6) ethPkt.getPayload();
@@ -280,6 +285,9 @@ public class AppComponent{
                 //         return; 
                 //     }
                 // }
+                if(Ip6Prefix.valueOf(srcIp, 64).contains(dstIp)) {
+                    return;
+                }
             }        
            
 
@@ -414,7 +422,7 @@ public class AppComponent{
                 return;
             }
 
-            TrafficSelector.Builder selector = DefaultTrafficSelector.builder().matchEthDst(frrMac);
+            TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
 
             if (dstIp.isIp4()){
                 selector
@@ -437,12 +445,24 @@ public class AppComponent{
                 ingressPoints.add(new FilteredConnectPoint(intface.connectPoint()));
             }
 
+            MacAddress nxtHop;
+            if (route.nextHopMac() == null && dstIp.isIp6()) {
+                nxtHop = MacAddress.valueOf(IPv6.getMacAddress(route.nextHop().toOctets()));
+            } else {
+                nxtHop = route.nextHopMac();
+            }
+
+            TrafficTreatment.Builder treatment = DefaultTrafficTreatment.builder()
+                .setEthSrc(frrMac)
+                .setEthDst(nxtHop);
+
             MultiPointToSinglePointIntent intent = MultiPointToSinglePointIntent.builder()
                 .appId(appId)
                 .key(Key.of("TRANSIT_" + route.prefix(), appId))
                 .filteredEgressPoint(new FilteredConnectPoint(interfaceService.getMatchingInterface(route.nextHop()).connectPoint()))
                 .filteredIngressPoints(ingressPoints)
                 .selector(selector.build())
+                .treatment(treatment.build())
                 .priority(10)
                 .build();
 
